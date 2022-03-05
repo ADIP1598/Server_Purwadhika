@@ -5,10 +5,19 @@ const transporter = require('../helper/nodemailer')
 
 module.exports = {
     getData: (req, res) => {
-        let scriptQuery = 'SELECT * FROM users;'
+        req.body.password = Crypto.createHmac("sha1", "hash123").update(req.body.password).digest("hex")
+        let scriptQuery = `SELECT * FROM users WHERE email=${db.escape(req.body.email)} and password=${db.escape(req.body.password)};`
         db.query(scriptQuery, (err, results) => {
             if (err) res.status(500).send(err)
-            res.status(200).send(results)
+            if (results[0]) {
+                let { idusers, username, email, password, role, status } = results[0]
+                let token = createToken({ idusers, username, email, password, role, status })
+                if (status != "verified") {
+                    res.status(200).send({ message: "Your account not verified" })
+                } else {
+                    res.status(200).send({ dataLogin: results[0], token, message: "Login Success" })
+                }
+            }
         })
     },
     register: (req, res) => {
